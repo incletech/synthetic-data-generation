@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LLM_model = SDG.LlmModel.from_config("together_ai", "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", 0, 4096)
+LLM_model = SDG.LlmModel.from_config("together_ai", "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", 0, 4096)
 #LLM_model = SDG.LlmModel.from_config("aimlapi", "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo", 0, 4096)
 
 
@@ -66,11 +66,22 @@ output_format: {{
 
 sce = """Alice wants to buy a new laptop for her work, focusing on performance, battery life, and portability. She needs a device that can efficiently handle multitasking and various software applications, with a high-resolution display and a comfortable keyboard to match her daily demands."""
 
-sys = SDG_system_message(sce)
-message = [{"role" : "system", "content" : sys}]
-response = asyncio.run(LLM_model.text_completion(message))
-print(response.choices[0].message.content)
+# sys = SDG_system_message(sce)
+# message = [{"role" : "system", "content" : sys}]
+# response = asyncio.run(LLM_model.text_completion(message))
+# total_tokens = response.usage.total_tokens
 
 #addition instrution is more detailed
 #tools also more based on scenerio
 #conversation need to be more enhanced
+
+
+
+def process_the_document(document):
+    for scenerio in document["scenerio"]:
+        sys = SDG_system_message(scenerio)
+        message = [{"role" : "system", "content" : sys}]
+        response = asyncio.run(LLM_model.text_completion(message))
+        final_response = response.choices[0].message.content
+        total_tokens = response.usage.total_tokens
+        

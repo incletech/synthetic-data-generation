@@ -9,5 +9,8 @@ tenacity
 groq
 requests
 together 
+openpyxl 
 celery
 redis
+openai
+pandas
