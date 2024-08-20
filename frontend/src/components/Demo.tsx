@@ -2,19 +2,29 @@ import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useGetModelCardsQuery, useUploadFileMutation } from '../services/modelService';
 
-const Demo = () => {
+// Define the types for the models and the data structure
+type Model = {
+  model_id: string;
+  name: string;
+};
+
+type ModelsByProvider = {
+  [provider: string]: Model[];
+};
+
+const Demo: React.FC = () => {
   const { user } = useUser();
-  const [modelsByProvider, setModelsByProvider] = useState({});
-  const [selectedModel, setSelectedModel] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState("");
-  const [selectedOutputFormat, setSelectedOutputFormat] = useState(""); 
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [uploadStatus, setUploadStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fileHistory, setFileHistory] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [filePreview, setFilePreview] = useState("");
-  const [fileUrl, setFileUrl] = useState(null);
+  const [modelsByProvider, setModelsByProvider] = useState<ModelsByProvider>({});
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedProvider, setSelectedProvider] = useState<string>("");
+  const [selectedOutputFormat, setSelectedOutputFormat] = useState<string>(""); 
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [fileHistory, setFileHistory] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [filePreview, setFilePreview] = useState<string>("");
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
 
   const { data: modelData, error, isLoading } = useGetModelCardsQuery();
   const [uploadFile] = useUploadFileMutation();
@@ -22,7 +32,7 @@ const Demo = () => {
   const apiToken = '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';
 
   useEffect(() => {
-    const storedHistory = JSON.parse(localStorage.getItem('fileHistory'));
+    const storedHistory = JSON.parse(localStorage.getItem('fileHistory') || '[]');
     if (storedHistory) {
       setFileHistory(storedHistory);
     }
@@ -30,7 +40,7 @@ const Demo = () => {
 
   useEffect(() => {
     if (modelData) {
-      const categorizedModels = modelData.reduce((acc, source) => {
+      const categorizedModels = modelData.reduce((acc: ModelsByProvider, source: any) => {
         const provider = Object.keys(source)[0];
         acc[provider] = source[provider];
         return acc;
@@ -40,8 +50,8 @@ const Demo = () => {
     }
   }, [modelData]);
 
-  const handleFileUpload = (event) => {
-    setUploadedFile(event.target.files[0]);
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadedFile(event.target.files ? event.target.files[0] : null);
   };
 
   const handleFileSubmit = async () => {
@@ -55,7 +65,7 @@ const Demo = () => {
     try {
       const uploadResponse = await uploadFile({
         file: uploadedFile,
-        userId: user.id,
+        userId: user!.id,
         model: selectedModel,
         modelProvider: selectedProvider,
         outputFormat: selectedOutputFormat,
@@ -102,7 +112,7 @@ const Demo = () => {
     }
   };
 
-  const handleFileSelection = (event) => {
+  const handleFileSelection = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const fileId = event.target.value;
     const file = fileHistory.find((f) => f.document_id === fileId);
     if (file) {
@@ -158,7 +168,7 @@ const Demo = () => {
             onChange={(e) => {
               const selectedOption = e.target.options[e.target.selectedIndex];
               setSelectedModel(e.target.value);
-              setSelectedProvider(selectedOption.getAttribute('data-provider'));
+              setSelectedProvider(selectedOption.getAttribute('data-provider') || '');
             }}
             className='p-2 border rounded-md'
           >
@@ -192,7 +202,9 @@ const Demo = () => {
         </div>
 
         <div className='flex flex-col'>
-          <br></br>
+          <label htmlFor='sample-data' className='mb-2 font-medium'>
+            Sample Data
+          </label>
           <button
             type='button'
             onClick={handleDownloadSample}
