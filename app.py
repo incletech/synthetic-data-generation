@@ -1,10 +1,10 @@
 import src.synthetic_data_genration as SDG
 import asyncio
 from dotenv import load_dotenv
-
+import pandas as pd
 load_dotenv()
 
-
+data=pd.read_excel('C:\\Users\\syedf\\OneDrive\\Desktop\\aiml\\synthetic-data-generation\\scenario.xlsx')
 import json
 import re
 
@@ -80,42 +80,71 @@ output_format: {{
 }}
 
 """
-
-sce = """Alice wants to buy a new laptop for her work, focusing on performance, battery life, and portability. She needs a device that can efficiently handle multitasking and various software applications, with a high-resolution display and a comfortable keyboard to match her daily demands."""
-
+# sce = """Scenario: Radhika ordered a washing machine for her new home but was disappointed when it arrived with a dent and wasn’t functioning properly. With a busy household, she urgently needs a working washing machine and is now dealing with the hassle of returning the faulty one and requesting a replacement."""
+ 
 # sys = SDG_system_message(sce)
 # message = [{"role" : "system", "content" : sys}]
 # response = asyncio.run(LLM_model.text_completion(message))
 # total_tokens = response.usage.total_tokens
-
+# result=response.choices[0].message.content
+ 
+# Regex pattern to capture each section
+system_message_pattern = r'"system_message": "(.*?)"(?=,)'
+tools_pattern = r'"tools": \[(.*?)](?=,)'
+conversation_pattern = r'"conversation":\s*("\s*(?:[^"\\]*(?:\\.[^"\\]*)*)\s*")(?=\s*,|\s*\})'
+ 
+# system_message = re.search(system_message_pattern, result, re.DOTALL)
+# tools = re.search(tools_pattern, result, re.DOTALL)
+# conversation = re.search(conversation_pattern, result, re.DOTALL)
+ 
+# Output results
+# print("System Message:", system_message.group(1) if system_message else "Not found")
+# print("/n/n")
+# print("Tools:", tools.group(1) if tools else "Not found")
+# print("/n/n")
+# print("Conversation:", conversation.group(1) if conversation else "Not found")
+ 
 #addition instrution is more detailed
 #tools also more based on scenerio
 #conversation need to be more enhanced
+ 
+ 
+ 
 
-
-
-
+ 
 def process_the_document(document):
-    # for scenerio in document["scenerio"]:
-        sys = SDG_system_message(document)
+    columns = ['Scenario', 'System Message', 'Tools', 'Conversation', 'Total Tokens']
+    df = pd.DataFrame(columns=columns)
+    row=[]
+    print("process")
+    i=0
+    for scenario in document["scenerio"]:
+        print(i)
+        i+=1
+        sys = SDG_system_message(scenario)
         message = [{"role" : "system", "content" : sys}]
         response = asyncio.run(LLM_model.text_completion(message))
         result=response.choices[0].message.content
-        extracted_content = extract_json_content(result)
-        if extracted_content:
-            print(json.dumps(extracted_content, indent=2))
-
-        data = extracted_content
-        res=data[0]
-        print(res)
-        print(type(res))
-        # data = json.loads(res)
-
-        # # Output the extracted variables
-        # print("System Message:", system_message)
-        # print("Tools:", tools)
-        # print("Conversation:", conversation)
+ 
+        system_message = re.search(system_message_pattern, result, re.DOTALL)
+        tools = re.search(tools_pattern, result, re.DOTALL)
+        conversation = re.search(conversation_pattern, result, re.DOTALL)
         total_tokens = response.usage.total_tokens
-        
-# print(process_the_document('.scenario.xlsx'))
-print(process_the_document(sce))
+ 
+        system_msg_content = system_message.group(1) if system_message else None
+        tools_content = tools.group(1) if tools else None
+        conversation_content = conversation.group(1) if conversation else None
+       
+        new_row = {
+            'Scenario': scenario,
+            'System Message': system_msg_content,
+            'Tools': tools_content,
+            'Conversation': conversation_content,
+            'Total Tokens': total_tokens
+        }
+        df = row.append(new_row)
+    df=pd.DataFrame(row)
+    return df
+ 
+process_the_document(data)
+ 
