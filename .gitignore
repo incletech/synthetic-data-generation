@@ -1,0 +1,23 @@
+# .gitignore
+
+# Python
+__pycache__/
+
+# Virtual Environment
+.venv/
+
+.env 
+
+app.log
+
+compose-dev.yaml
+
+chainlit.md
+
+.chainlit/
+
+public
+
+data
+
+.deepeval-cache.json/

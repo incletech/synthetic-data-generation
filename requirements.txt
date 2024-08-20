@@ -1,0 +1,13 @@
+python-multipart
+pydantic
+gunicorn
+uvicorn
+fastapi
+python-dotenv
+pymongo
+tenacity
+groq
+requests
+together 
+celery
+redis
