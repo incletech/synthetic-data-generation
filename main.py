@@ -28,7 +28,7 @@ app.add_middleware(
 async def handle_file(
     file: UploadFile = File(...),
     output_format : str= Form(...),
-    user_id: int = Form(...),
+    user_id: str = Form(...),
     model_providers: str = Form(...),
     model: str = Form(...)
 ):
@@ -78,24 +78,42 @@ async def get_model():
         return response
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": f"Error retrieving model cards: {str(e)}"})
+    
+@app.get("/get_demo_csv/")
+async def get_model():
+    try:
+        data = {
+            'scenerio': [
+                'Smita ordered a portable power bank for an upcoming birthday. However, after receiving the product, they faced issues with the product installation. Now, Smita is worried about finding a solution before the birthday.',
+                'Harsh ordered a smart doorbell for an upcoming fitness challenge. However, after receiving the product, they had trouble with the payment process. Now, Harsh is worried about finding a solution before the fitness challenge.',
+                'Ajay ordered a tablet for an upcoming long weekend. However, after receiving the product, they received a notification that the product is delayed. Now, Ajay is worried about finding a solution before the long weekend.',
+                'Kiran ordered a air purifier for an upcoming anniversary. However, after receiving the product, they faced issues with the product installation. Now, Kiran is worried about finding a solution before the anniversary.',
+                'Sanjay ordered a electric grill for an upcoming Diwali celebration. However, after receiving the product, they discovered that the product is out of stock after placing the order. Now, Sanjay is worried about finding a solution before the Diwali celebration.']}
+        
+        df = pd.DataFrame(data)
+        stream = io.StringIO()
+        df.to_csv(stream, index=False)
+        stream.seek(0)
+        response = StreamingResponse(iter([stream.getvalue()]),
+                                     media_type="text/csv")
+        response.headers["Content-Disposition"] = "attachment; filename=sample.csv"
+
+        return response
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Error retrieving model cards: {str(e)}"})
 
 
-@app.post("/get_documents/")  # Changed to POST
+@app.post("/get_documents/") 
 async def get_data(document_id: str = Form(...), output_format: str = Form(...)):
     try:
-        # Fetch or generate DataFrame based on document_id
         data = {
             'Column1': [1, 2, 3],
             'Column2': ['A', 'B', 'C']
         }
         df = pd.DataFrame(data)
-
-        # Convert DataFrame to CSV
         stream = io.StringIO()
         df.to_csv(stream, index=False)
         stream.seek(0)
-
-        # Streaming response setup
         response = StreamingResponse(iter([stream.getvalue()]),
                                      media_type="text/csv")
         response.headers["Content-Disposition"] = "attachment; filename=export.csv"

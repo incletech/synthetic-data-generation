@@ -1,47 +1,63 @@
+import os
+from collections import deque
 from typing import List, Optional, Dict, Any
+
 from openai import AsyncOpenAI
 from groq import AsyncGroq
 from together import AsyncTogether
-import os
-
 
 class ClientInitializerLlm:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ClientInitializerLlm, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.clients = {
-            'openai': self.init_openai_client(),
-            'groq': self.init_groq_client(),
-            'aimlapi': self.init_aimlapi_client(),
-            'together_ai' : self.init_together_ai_client()
-        }
+        if not hasattr(self, 'initialized'): 
+            self.initialized = True
+            together_ai_keys = [os.getenv(f"together_ai{i}") for i in range(11)]
+            if not all(together_ai_keys):
+                raise ValueError("One or more Together AI API keys are missing.")
+            
+            self.together_ai_keys = deque(together_ai_keys)
+            self.api_keys = {
+                'groq': os.getenv("groq_api"),
+                'aimlapi': os.getenv("aiml_api")
+            }
+            self.clients = {
+                'groq': self.init_groq_client(),
+                'aimlapi': self.init_aimlapi_client(),
+                'together_ai': self.init_together_ai_client()
+            }
 
     def init_groq_client(self):
-        api_key = os.getenv("groq_api")
+        api_key = self.api_keys['groq']
         if not api_key:
             raise ValueError("Groq API key is missing.")
         return AsyncGroq(api_key=api_key)
 
-    def init_openai_client(self):
-        api_key = os.getenv("openai_api")
-        if not api_key:
-            raise ValueError("OpenAI API key is missing.")
-        return AsyncOpenAI(api_key=api_key)
-
     def init_aimlapi_client(self):
-        api_key = os.getenv("aiml_api")
+        api_key = self.api_keys['aimlapi']
         if not api_key:
             raise ValueError("AIML API key is missing.")
         return AsyncOpenAI(api_key=api_key, base_url="https://api.aimlapi.com")
-    
+
     def init_together_ai_client(self):
-        api_key = os.getenv("together_ai")
+        api_key = self.together_ai_keys[0] 
         if not api_key:
-            raise ValueError("AIML API key is missing.")
+            raise ValueError("Together AI API key is missing.")
         return AsyncTogether(api_key=api_key)
 
-    def get_client(self, client_name: str):
-        client = self.clients.get(client_name)
-        return client
+    def rotate_together_ai_client(self):
+        self.together_ai_keys.rotate(-1)
+        new_key = self.together_ai_keys[0]
+        print(f"Rotated to new Together AI API key: {new_key}")
+        self.clients['together_ai'] = self.init_together_ai_client()
 
+    def get_client(self, client_name):
+        return self.clients.get(client_name)
 
 class LlmModel:
     def __init__(self, client, model: str, temperature: float, max_tokens: int, tools: Optional[List[Any]] = None):
@@ -81,10 +97,13 @@ class LlmModel:
     async def text_completion(self, messages: List[Dict[str, Any]]):
         return await self._create_completion(messages)
 
-    async def json_completion(self, messages: List[Dict[str, Any]]):
-        response_format = {"type": "json_object"}
+    async def json_completion(self, messages: List[Dict[str, Any]], response_format={"type": "json_object"}):
         return await self._create_completion(messages, response_format)
 
     async def function_calling(self, messages: List[Dict[str, Any]]):
         return await self._create_completion(messages)
 
+    async def rotate_client(self, client_name: str):
+        initializer = ClientInitializerLlm()
+        initializer.rotate_together_ai_client() 
+        self.client = initializer.get_client(client_name) 

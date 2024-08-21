@@ -1,10 +1,11 @@
 import src.synthetic_data_genration as SDG
-import asyncio
+import asyncio, os
 from dotenv import load_dotenv
 import pandas as pd
+from tqdm import tqdm
 load_dotenv()
 
-data=pd.read_excel('C:\\Users\\syedf\\OneDrive\\Desktop\\aiml\\synthetic-data-generation\\scenario.xlsx')
+
 import json
 import re
 
@@ -49,7 +50,6 @@ Rules:
       ASSISTANT: give the FUNCTION RESPONSE in user friendly formatted
       ```
 
-
  - Scenario Customization:
     - Use the scenario details to adjust the system message, ensuring it reflects the specific context or use case.
     - Define tools that are directly relevant to the scenario, adjusting their descriptions and parameters accordingly.
@@ -80,71 +80,65 @@ output_format: {{
 }}
 
 """
-# sce = """Scenario: Radhika ordered a washing machine for her new home but was disappointed when it arrived with a dent and wasn’t functioning properly. With a busy household, she urgently needs a working washing machine and is now dealing with the hassle of returning the faulty one and requesting a replacement."""
- 
-# sys = SDG_system_message(sce)
-# message = [{"role" : "system", "content" : sys}]
-# response = asyncio.run(LLM_model.text_completion(message))
-# total_tokens = response.usage.total_tokens
-# result=response.choices[0].message.content
- 
 # Regex pattern to capture each section
 system_message_pattern = r'"system_message": "(.*?)"(?=,)'
 tools_pattern = r'"tools": \[(.*?)](?=,)'
 conversation_pattern = r'"conversation":\s*("\s*(?:[^"\\]*(?:\\.[^"\\]*)*)\s*")(?=\s*,|\s*\})'
  
-# system_message = re.search(system_message_pattern, result, re.DOTALL)
-# tools = re.search(tools_pattern, result, re.DOTALL)
-# conversation = re.search(conversation_pattern, result, re.DOTALL)
- 
-# Output results
-# print("System Message:", system_message.group(1) if system_message else "Not found")
-# print("/n/n")
-# print("Tools:", tools.group(1) if tools else "Not found")
-# print("/n/n")
-# print("Conversation:", conversation.group(1) if conversation else "Not found")
- 
-#addition instrution is more detailed
-#tools also more based on scenerio
-#conversation need to be more enhanced
- 
- 
- 
 
- 
-def process_the_document(document):
+async def process_the_document(user_id, document, file_output_format):
     columns = ['Scenario', 'System Message', 'Tools', 'Conversation', 'Total Tokens']
-    df = pd.DataFrame(columns=columns)
-    row=[]
-    print("process")
-    i=0
-    for scenario in document["scenerio"]:
-        print(i)
-        i+=1
-        sys = SDG_system_message(scenario)
-        message = [{"role" : "system", "content" : sys}]
-        response = asyncio.run(LLM_model.text_completion(message))
-        result=response.choices[0].message.content
- 
-        system_message = re.search(system_message_pattern, result, re.DOTALL)
-        tools = re.search(tools_pattern, result, re.DOTALL)
-        conversation = re.search(conversation_pattern, result, re.DOTALL)
-        total_tokens = response.usage.total_tokens
- 
-        system_msg_content = system_message.group(1) if system_message else None
-        tools_content = tools.group(1) if tools else None
-        conversation_content = conversation.group(1) if conversation else None
-       
-        new_row = {
-            'Scenario': scenario,
-            'System Message': system_msg_content,
-            'Tools': tools_content,
-            'Conversation': conversation_content,
-            'Total Tokens': total_tokens
-        }
-        df = row.append(new_row)
-    df=pd.DataFrame(row)
-    return df
- 
-process_the_document(data)
- 
+    rows = []
+    output_dir = f"./output/"
+    os.makedirs(output_dir, exist_ok=True)
+    for scenario in tqdm(document["scenerio"], desc="Processing Scenarios"):
+        try:
+            sys = SDG_system_message(scenario)
+            message = [{"role" : "system", "content" : sys}]
+            response = await LLM_model.text_completion(message)
+            if response.choices: 
+                result = response.choices[0].message.content
+                print(result)
+                system_message = re.search(system_message_pattern, result, re.DOTALL)
+                print(system_message)
+                tools = re.search(tools_pattern, result, re.DOTALL)
+                print(tools)
+                conversation = re.search(conversation_pattern, result, re.DOTALL)
+                print(conversation)
+                total_tokens = response.usage.total_tokens
+                print(total_tokens)
+
+                rows.append({
+                    'Scenario': scenario,
+                    'System Message': system_message.group(1) if system_message else None,
+                    'Tools': tools.group(1) if tools else None,
+                    'Conversation': conversation.group(1) if conversation else None,
+                    'Total Tokens': total_tokens
+                })
+            else:
+                print(f"No response for scenario: {scenario}")
+            await LLM_model.rotate_client('together_ai')
+
+        except Exception as e:
+            print("Error during completion:", str(e))
+            await LLM_model.rotate_client('together_ai') 
+            continue 
+
+    data = pd.DataFrame(rows, columns=columns)
+    file_path = f"{output_dir}report_{user_id}.{file_output_format.lower()}"
+
+    if file_output_format.lower() == "csv":
+        data.to_csv(file_path, index=False)
+    elif file_output_format.lower() == "excel":
+        data.to_excel(file_path, index=False)
+    else:
+        raise ValueError("File output format is not supported")
+
+    return f"File is processed successfully and stored at {file_path}"
+
+
+import asyncio
+data=pd.read_excel("C:\\Users\\Gokul\\Desktop\\Hackthon\\synthetic-data-generation\\scenario.xlsx")
+print(data)
+x = asyncio.run(process_the_document("24524524",data, "csv"))
+print(x)
