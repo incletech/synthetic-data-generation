@@ -5,6 +5,8 @@ from typing import List, Optional, Dict, Any
 from openai import AsyncOpenAI
 from groq import AsyncGroq
 from together import AsyncTogether
+from collections import deque
+import os
 
 class ClientInitializerLlm:
     _instance = None
@@ -15,17 +17,23 @@ class ClientInitializerLlm:
         return cls._instance
 
     def __init__(self):
-        if not hasattr(self, 'initialized'): 
+        if not hasattr(self, 'initialized'):
             self.initialized = True
             together_ai_keys = [os.getenv(f"together_ai{i}") for i in range(11)]
+            groq_keys = [os.getenv(f"groq_api{i}") for i in range(8)]
+            
             if not all(together_ai_keys):
                 raise ValueError("One or more Together AI API keys are missing.")
+            if not all(groq_keys):
+                raise ValueError("One or more Groq API keys are missing.")
             
             self.together_ai_keys = deque(together_ai_keys)
+            self.groq_keys = deque(groq_keys)
+
             self.api_keys = {
-                'groq': os.getenv("groq_api"),
                 'aimlapi': os.getenv("aiml_api")
             }
+
             self.clients = {
                 'groq': self.init_groq_client(),
                 'aimlapi': self.init_aimlapi_client(),
@@ -33,10 +41,10 @@ class ClientInitializerLlm:
             }
 
     def init_groq_client(self):
-        api_key = self.api_keys['groq']
+        api_key = self.groq_keys[0]
         if not api_key:
             raise ValueError("Groq API key is missing.")
-        return AsyncGroq(api_key=api_key)
+        return AsyncGroq(api_key=api_key) 
 
     def init_aimlapi_client(self):
         api_key = self.api_keys['aimlapi']
@@ -45,7 +53,7 @@ class ClientInitializerLlm:
         return AsyncOpenAI(api_key=api_key, base_url="https://api.aimlapi.com")
 
     def init_together_ai_client(self):
-        api_key = self.together_ai_keys[0] 
+        api_key = self.together_ai_keys[0]
         if not api_key:
             raise ValueError("Together AI API key is missing.")
         return AsyncTogether(api_key=api_key)
@@ -53,8 +61,12 @@ class ClientInitializerLlm:
     def rotate_together_ai_client(self):
         self.together_ai_keys.rotate(-1)
         new_key = self.together_ai_keys[0]
-        print(f"Rotated to new Together AI API key: {new_key}")
         self.clients['together_ai'] = self.init_together_ai_client()
+
+    def rotate_groq_client(self):
+        self.groq_keys.rotate(-1)
+        new_key = self.groq_keys[0]
+        self.clients['groq'] = self.init_groq_client()
 
     def get_client(self, client_name):
         return self.clients.get(client_name)
@@ -105,5 +117,8 @@ class LlmModel:
 
     async def rotate_client(self, client_name: str):
         initializer = ClientInitializerLlm()
-        initializer.rotate_together_ai_client() 
-        self.client = initializer.get_client(client_name) 
+        if client_name == 'together_ai':
+            initializer.rotate_together_ai_client()
+        elif client_name == 'groq':
+            initializer.rotate_groq_client()
+        self.client = initializer.get_client(client_name)

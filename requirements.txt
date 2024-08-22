@@ -15,3 +15,4 @@ redis
 openai
 pandas
 tqdm
+xlsxwriter
