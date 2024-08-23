@@ -16,3 +16,4 @@ openai
 pandas
 tqdm
 xlsxwriter
+streamlit

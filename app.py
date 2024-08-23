@@ -12,7 +12,7 @@ tools_pattern = r'tools:#\$%\s*\[\s*([\s\S]*?)\s*\]\s*#\$%'
 system_message_pattern = r'system_message:#\$%\s*"([\s\S]*?)"\s*#\$%'
 
 
-async def process_the_document(user_id, document_id, document, client, model, file_output_format):
+async def process_the_document(user_id, document_id, mail_id ,document, client, model, file_output_format):
     token_use = 0
     LLM_model = SDG.LlmModel.from_config(client, model, 0, 4096)
     for scenario in tqdm(document["scenerio"], desc="Processing Scenarios"):
@@ -46,6 +46,7 @@ async def process_the_document(user_id, document_id, document, client, model, fi
                         payload = {
                             "user_id": user_id,
                             "document_id": document_id,
+                            "mail_id" : mail_id,
                             'scenario': scenario,
                             'system_message': system_message_content,
                             'tools': tools_content,
