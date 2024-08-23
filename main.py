@@ -146,7 +146,7 @@ st.caption(
 st.write("Revolutionize Your AI Training with Tailored Synthetic Data!")
 st.write("From Scenarios to Solutions: Empower Your LLMs with Our Synthetic Data Generator!")
 st.write("Create Realistic Scenarios. Generate High-Quality Data. Train Smarter AI.")
-st.divider()
+
 
 # ------ File Upload Option ------ #
 uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
@@ -183,7 +183,8 @@ if model_provider:
         st.write(f"Selected Model ID: {selected_model_id}")
 
 if model_provider == "AIML API":
-    model_provider = "aimlapi"
+    model_provider = "together_ai"
+    selected_model_id = "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
 elif model_provider == "Groq":
     model_provider = "groq"
 elif model_provider == "Together AI":
@@ -194,7 +195,7 @@ st.markdown('<div class="selectbox-container"><div class="selectbox-header">Sele
 output_format = st.selectbox("", options=["CSV", "Excel"])
 st.markdown('</div>', unsafe_allow_html=True)
 # ------ Query Button ------ #
-query = st.button("Query")
+query = st.button("Generate")
 
 # ------ Results ------ #
 if query:
